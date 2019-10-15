@@ -1,0 +1,1 @@
+﻿In Project1, we tested the arithmetic operations like addiu, addu, and subu. Then we check the registers and the element within it. Due to time constraints, we only made one test files. The rest of the code, we tested with given sample. What we are lacking to test are the srl, sll, lw, sw, jal, and many more functions.

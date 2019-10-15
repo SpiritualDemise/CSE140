@@ -138,6 +138,7 @@ void Simulate () {
  */
 void PrintInfo ( int changedReg, int changedMem) {
     int k, addr;
+	//printf("%d\n", mips.pc);
     printf ("New pc = %8.8x\n", mips.pc);
     if (!mips.printingRegisters && changedReg == -1) {
         printf ("No register was updated.\n");
@@ -170,6 +171,8 @@ void PrintInfo ( int changedReg, int changedMem) {
     }
 }
 
+
+
 /*
  *  Return the contents of memory at the given address. Simulates
  *  instruction fetch. 
@@ -181,6 +184,108 @@ unsigned int Fetch ( int addr) {
 /* Decode instr, returning decoded instruction. */
 void Decode ( unsigned int instr, DecodedInstr* d, RegVals* rVals) {
     /* Your code goes here */
+	int opcode = 0;
+	int rs = 0;
+	int rt = 0;
+	int rd = 0;
+	int shamt = 0;
+	unsigned int function = 0;
+	int immediates = 0;
+
+	// geting the opcode, first 6 bit
+	opcode = instr>>26;
+	d->op = opcode;
+	// after the first shift there are zeros...
+
+	//J-format
+	if(opcode == 2 || opcode == 3){
+		int temp = 0;
+		//d->op = opcode;
+		d->type = J;
+		//getting the location
+		// eliminate the opcode 26adddress + 6zeros,
+		temp = instr<<6>>4;
+		//printf("1.%x\n",temp);
+		//temp = instr & (0xF0000000);
+		//printf("2.%x\n",temp);
+		//which I only need 2 zeros
+		//temp = temp>>2;
+		//printf("3.%x\n ",temp);
+		d->regs.j.target = temp;
+		//printf("%x\n3 ",temp);
+
+	}
+
+	//R-format
+	else if(opcode == 0){
+		//d->op = opcode;
+		//type
+		d->type	= R;
+		//rs, eliminate opcde and all element after rs; 6
+		rs = instr<<6;
+		d->regs.r.rs = rs>>27;
+		//rt eliminte opcode rs and all other element after rt; 6+5
+		rt = instr<<11;
+		d->regs.r.rt = rt>>27;
+		//rd same as above 6+5+5
+		rd = instr<<16;
+		d->regs.r.rd = rd>>27;
+		//shamt same as above 6+5+5+5
+		shamt = instr<<21;
+		d->regs.r.shamt = shamt>>27;
+		// function same as above 6+5+5+5+5 6bit required
+		function = instr<<26;
+		d->regs.r.funct = function>>26;
+		//rVals->R_rs = mips.registers[d->regs.r.rs];
+                //rVals->R_rt = mips.registers[d->regs.r.rt];
+                //rVals->R_rd=0;
+
+	}
+	//I-format
+	else{
+		//d->op = opcode;
+		//type
+		d->type	= I;
+		//rs, eliminate opcde and all element after rs; 6
+		rs = instr<<6;
+		d->regs.i.rs = rs>>27;
+		//rt eliminte opcode rs and all other element after rt; 6+5
+		rt = instr<<11;
+		d->regs.i.rt = rt>>27;
+		//immediates
+		//int temp = 0;
+			//temp=instr<<2;
+		//temp;
+
+		immediates = instr & (0x0000ffff);
+		//positive  16->32bit address
+			if(immediates>>15 == 0){ 
+
+			//bitwise and
+				//d->regs.i.addr_or_immed
+				d->regs.i.addr_or_immed = immediates & (0x0000ffff);
+			}
+		//negative 
+			else {
+			//printf("hello\n");
+			//bitwise or
+				d->regs.i.addr_or_immed = immediates | (0xffff0000);
+			}
+
+	//}
+		/*
+		else{
+			immediates = immediates <<2;
+			immediates = immediates >> 6;
+			printf("%x\n ",immediates);			
+		}
+		*/
+			//}
+
+
+			//immediates = instr & (0x0000ffff);
+	}
+
 }
 
 /*
@@ -189,11 +294,279 @@ void Decode ( unsigned int instr, DecodedInstr* d, RegVals* rVals) {
  */
 void PrintInstruction ( DecodedInstr* d) {
     /* Your code goes here */
+
+	//j-format
+	if(d->op == 2 || d->op == 3){
+			//j
+			if(d->op == 2){
+		   		printf("j\t");
+				printf("0x%.8x\n",d->regs.j.target);
+			}
+			//jal
+			else {
+		   		printf("jal\t");
+				printf("0x%.8x\n", d->regs.j.target);
+			}
+	}
+
+	//r-format
+	else if(d->op == 0){
+		//sll
+		if(d->regs.r.funct == 0){
+                  	printf("sll\t");
+			printf("$%d, ", d->regs.r.rd);
+			printf("$%d, ", d->regs.r.rt);
+			printf("$%d\n",d->regs.r.shamt);
+		}
+		//srl
+		else if(d->regs.r.funct == 2){
+                  	printf("srl\t");
+			printf("$%d, ", d->regs.r.rd);
+			printf("$%d, ", d->regs.r.rt);
+			printf("$%d\n",d->regs.r.shamt);
+		}
+		//jr
+		else if(d->regs.r.funct == 8){
+                  	printf("jr\t");
+			printf("$%d", d->regs.r.rs);
+		}
+		//addu
+		else if(d->regs.r.funct == 33){
+			printf("addu\t");
+			printf("$%d, ", d->regs.r.rd);
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%d\n",d->regs.r.rt);
+		}
+		//subu
+		else if(d->regs.r.funct == 35){
+                  	printf("subu\t");
+			printf("$%d, ", d->regs.r.rd);
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%d\n",d->regs.r.rt);
+		}
+		//and
+		else if(d->regs.r.funct == 36){
+                  	printf("and\t");
+			printf("$%d, ", d->regs.r.rd);
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%d\n",d->regs.r.rt);
+		}
+		//or
+		else if(d->regs.r.funct == 37){
+                  	printf("or\t");
+			printf("$%d, ", d->regs.r.rd);
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%d\n",d->regs.r.rt);
+		}
+		//slt
+		else if(d->regs.r.funct == 42){
+                  	printf("slt\t");
+			printf("$%d, ", d->regs.r.rd);
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%d\n",d->regs.r.rt);
+		}
+		//instruction doesn't exist
+		else{
+			printf("Instruction doesn't exist");
+			exit(0);
+		}
+
+	}
+
+	//i-format
+	else{
+			int temp = 0;
+		//beq
+		if(d->op == 4){
+                  	printf("beq\t");
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%d, ", d->regs.r.rt);
+			temp = d->regs.i.addr_or_immed;
+			temp = mips.pc + 4 + ( temp << 2);
+			printf("0x%8.8x\n",temp);
+		}
+		//bne
+		else if(d->op == 5){
+                  	printf("bne\t");
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%d, ", d->regs.r.rt);
+			temp = d->regs.i.addr_or_immed;
+			temp = mips.pc + 4 + ( temp << 2);
+			printf("0x%8.8x\n",temp);
+		}
+		//addiu
+		else if(d->op == 9){
+                  	printf("addiu\t");
+			printf("$%d, ", d->regs.r.rt);
+			printf("$%d, ", d->regs.r.rs);
+			printf("%d\n",d->regs.i.addr_or_immed);
+		}
+		//andi
+		else if(d->op == 12){
+                  	printf("andi\t");
+			printf("$%d, ", d->regs.r.rt);
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%x\n",d->regs.i.addr_or_immed);
+		}
+		//ori
+		else if(d->op == 13){
+                  	printf("ori\t");
+			printf("$%d, ", d->regs.r.rt);
+			printf("$%d, ", d->regs.r.rs);
+			printf("$%x\n",d->regs.i.addr_or_immed);
+		}
+		//lui
+		else if(d->op == 15){
+                  	printf("lui\t");
+			printf("$%d, ", d->regs.r.rt);
+			printf("$%x\n",d->regs.i.addr_or_immed);
+		}
+		//lw
+		else if(d->op == 35){
+                  	printf("lw\t");
+			printf("$%d, ", d->regs.r.rt);
+			printf("%x",d->regs.i.addr_or_immed);
+			printf("($%d)\n), ", d->regs.r.rs);
+		}
+		//sw
+		else if(d->op == 43){
+                  	printf("sw\t");
+			printf("$%d, ", d->regs.r.rt);
+			printf("%x",d->regs.i.addr_or_immed);
+			printf("($%d)\n), ", d->regs.r.rs);
+
+			
+		}
+		//instruction doesn't exist
+		else{
+			printf("Instruction doesn't exist");
+			exit(0);
+		}
+
+	}
+
+
 }
 
 /* Perform computation needed to execute d, returning computed value */
 int Execute ( DecodedInstr* d, RegVals* rVals) {
     /* Your code goes here */
+	//j-format
+	if(d->op == 2 || d->op == 3){
+		//j
+		if(d->op == 2){
+		   	return (mips.pc + 4);
+		}
+		//jal
+		else {
+		   	return (mips.pc + 4);
+		}
+	}
+
+	//r-format
+	else if(d->op == 0){
+		//sll
+		if(d->regs.r.funct == 0){
+                  	return (mips.registers[d->regs.r.rt] << d->regs.r.shamt);
+		}
+		//srl
+		else if(d->regs.r.funct == 2){
+                  	return (mips.registers[d->regs.r.rt] >> d->regs.r.shamt);
+		}
+		//jr
+		else if(d->regs.r.funct == 8){
+                  	return (mips.registers[31]);
+		}
+		//addu
+		else if(d->regs.r.funct == 33){
+			
+			return (mips.registers[d->regs.r.rs] + mips.registers[d->regs.r.rt]);
+		}
+		//subu
+		else if(d->regs.r.funct == 35){
+                  	return (mips.registers[d->regs.r.rs] - mips.registers[d->regs.r.rt]);
+		}
+		//and
+		else if(d->regs.r.funct == 36){
+			//bitwise and
+                  	return (mips.registers[d->regs.r.rs] & mips.registers[d->regs.r.rt]);
+		}
+		//or
+		else if(d->regs.r.funct == 37){
+			//bitwise or
+                  	return (mips.registers[d->regs.r.rs] | mips.registers[d->regs.r.rt]);
+		}
+		//slt
+		else if(d->regs.r.funct == 42){
+                  	return (mips.registers[d->regs.r.rs] - mips.registers[d->regs.r.rt] < 0);
+		}
+		//instruction doesn't exist
+		else{
+			printf("Instruction doesn't exist");
+			exit(0);
+		}
+
+	}
+
+	//i-format
+	else{
+		//beq and bne
+		if(d->op == 4 ){
+           	 	if(mips.registers[d->regs.i.rs] - mips.registers[d->regs.i.rt] == 0){
+				return 1;
+			}
+			else{
+				return 0;
+			}
+			 
+		}
+			else if(d->op == 5){
+				//bne
+			if(mips.registers[d->regs.i.rs] - mips.registers[d->regs.i.rt] != 0){
+				return 1;
+			}
+			else {
+				return 0;
+			}
+		}
+		
+
+
+		//addiu
+		else if(d->op == 9){
+			//printf("hello world\n");
+                  	return (mips.registers[d->regs.i.rs] + d->regs.i.addr_or_immed);
+		}
+		//andi
+		else if(d->op == 12){
+                  	return (mips.registers[d->regs.i.rs] & d->regs.i.addr_or_immed);
+		}
+		//ori
+		else if(d->op == 13){
+                  	 return (mips.registers[d->regs.i.rs] | d->regs.i.addr_or_immed);
+		}
+		//lui
+		else if(d->op == 15){
+                  	return ((d->regs.i.addr_or_immed << 16) & 0xFFFF0000);
+		}
+		//lw
+		else if(d->op == 35){
+                  	return (mips.registers[d->regs.i.rs] - (d->regs.i.addr_or_immed/4+1)*4);
+		}
+		//sw
+		else if(d->op == 43){
+                  	return (mips.registers[d->regs.i.rs] - (d->regs.i.addr_or_immed/4+1)*4);
+			
+		}
+		//instruction doesn't exist
+		else{
+			printf("Instruction doesn't exist");
+			exit(0);
+		}
+
+	}
+
+
   return 0;
 }
 
@@ -205,6 +578,46 @@ int Execute ( DecodedInstr* d, RegVals* rVals) {
 void UpdatePC ( DecodedInstr* d, int val) {
     mips.pc+=4;
     /* Your code goes here */
+
+     //mips.pc only changes for certains instructions
+    //these instructions are: jr, beq, ben, j, and jal
+    //so we have to make sure that mips.pc is updated correctly
+    //R-format; if it is jr
+    if(d -> type == R){
+
+		if(d -> regs.r.funct == 8){
+
+			        mips.pc = val;
+
+		}
+
+    }
+		
+    //I-format; if it is either bne, or beq
+    else if(d->type == I){
+		
+        //we have to check the value with the correct function to see if it does update
+        if(d -> op == 4 ){
+		
+            mips.pc += val;
+
+        }
+        else if(d -> op == 5){
+
+            mips.pc += val;
+
+        }
+
+    }
+    //J-format; if it is either j or jal
+    else if(d -> type == J){
+
+        //for either of the two funcitons we have to change pc to the jump target
+        mips.pc = d -> regs.j.target;
+
+
+    }
+
 }
 
 /*
@@ -219,6 +632,53 @@ void UpdatePC ( DecodedInstr* d, int val) {
  */
 int Mem( DecodedInstr* d, int val, int *changedMem) {
     /* Your code goes here */
+    
+         //it is lw or sw so we have to do the load or store memory.
+    if(d -> op == 35 || d -> op == 45){
+
+        //only dealing with I format do we don't have to worry about checking for
+        //for any other format
+
+        //Initialize all the characteristics of the I-format
+        int immediate = (d -> regs.i.addr_or_immed) * 4; //converting to bits
+        int rs = mips.registers[d -> regs.i.rs]; //grabing the value of rs through the mips register
+        //int rt = mips.registers[d -> regs.i.rt]; //grabing the value of rt through the mips register
+
+        //if load word memory manage here
+        if(d -> op == 35){
+
+            //load word only changes the value of rt doesn't change the memory
+            val = mips.memory[1024 + rs + immediate]; //mips cheat sheet [R[rs] + imm]
+            *changedMem = -1;
+            return val;
+
+
+        }
+        //if not then it can only be store word and memory manage here
+        else{
+
+            //store word changes the memory and sets rt
+            
+            //dividing by 4 to get the bits
+           // rt = mips.memory[1024 + ((rs + immediate) / 4)];//mips cheat sheet [R[rs] + imm]
+            int newrtvalue = 0x00401000 + rs + immediate; //didnt change val so we have to manually get the new value
+            *changedMem = newrtvalue; //changing the memory to the new rt value
+            
+            return newrtvalue;
+
+        }
+
+    }
+    else{ //then anything other than store word and load word we do no memory management
+
+        //since no memory was updated we change it to -1
+        *changedMem = -1;
+        return val;
+
+    }
+
+
+    
   return 0;
 }
 
@@ -230,4 +690,67 @@ int Mem( DecodedInstr* d, int val, int *changedMem) {
  */
 void RegWrite( DecodedInstr* d, int val, int *changedReg) {
     /* Your code goes here */
+
+
+    if(d -> type == R){
+
+        //check to see if it is jr instructions because it doesn't modify the register
+        if( d -> regs.r.funct == 8){
+
+            *changedReg = -1;
+
+        }
+        //only two statments becuase everything else in R-format changes the register
+        //updates the value of the register that was changed and puts the index of the
+        // modified value
+        else{
+
+            mips.registers[d -> regs.r.rd] = val;
+            *changedReg = d -> regs.r.rd;
+
+        }
+
+
+    }
+    else if(d -> type == I){
+
+        //checks to see if the functions or beq, bne, or sw becuase these instructions
+        //don't change any resgisters
+        if(d -> op == 4 || d -> op == 5 || d -> op == 43){
+
+            *changedReg = -1;
+
+        }
+        else{
+            //any other I-format instruction that is given to use changes a register
+            mips.registers[d -> regs.i.rt] = val;
+            *changedReg = d -> regs.i.rt;
+
+        }
+
+    }
+    else{
+
+        //checks to see if the function is j becuase it doesn't change any register
+        if( d -> op == 2){
+
+            *changedReg = -1;
+
+        }
+        //checks the only other option which is jal and it does change a register
+        else{
+
+            // it is given as 31 because this allows the subroutine to go back to the
+            //main body routine of the code
+            mips.registers[31] = val;
+            *changedReg = 31;
+
+
+        }
+
+
+
+    }
+
 }
+
