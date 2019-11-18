@@ -580,7 +580,7 @@ void UpdatePC ( DecodedInstr* d, int val) {
     /* Your code goes here */
 
      //mips.pc only changes for certains instructions
-    //these instructions are: jr, beq, ben, j, and jal
+    //these instructions are: jr, beq, bne, j, and jal
     //so we have to make sure that mips.pc is updated correctly
     //R-format; if it is jr
     if(d -> type == R){
