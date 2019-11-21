@@ -59,7 +59,7 @@ void init_lfu(int assoc_index, int block_index)
 
 
 
-// From Michael CSE177 lab
+// From Michael CSE177 Lectures and Project
 
 
 unsigned int Least_Recently_Used(unsigned index){
@@ -225,9 +225,9 @@ void accessMemory(address addr, word* data, WriteEnable we)
   //4 is the minimum can do more
   int transfer = 4; 
   //always hit
-  int hit = 1;
+  int miss = 1;
 
-   unsigned addr_no_offset = addr&~offset;
+   //unsigned addr_no_offset = addr&~offset;
 
   //search for the block in where the data locates
   int block_address = -1;
@@ -245,7 +245,7 @@ void accessMemory(address addr, word* data, WriteEnable we)
   //do only random and LRU replacement
   //if(block_address == -1){
     if(policy == RANDOM){
-      block_address = randomint(index);
+      block_address = randomint(block_address);
     }
     else if (policy == LRU){
       block_address = Least_Recently_Used(index);
@@ -255,23 +255,27 @@ void accessMemory(address addr, word* data, WriteEnable we)
       //do something here 
        printf("hi?\n");
     }*/
-        accessDRAM(addr_no_offset,cache[index].block[block_address].data,uint_log2(block_size),READ);
+        //access the Dram for the data
+        accessDRAM(addr,cache[index].block[block_address].data,offsetBits,READ);
+        //tag to the current tag
         cache[index].block[block_address].tag = tag;
+        //reset conditions
         cache[index].block[block_address].valid = VALID;
         cache[index].block[block_address].dirty = VIRGIN;
         //reset the accesscount for the data 
         init_lfu(index,block_address);
         //missed
-        hit = 0;
+        miss = 0;
 
   //}
   }
   else if(memory_sync_policy == WRITE_BACK && cache[index].block[block_address].dirty == DIRTY)
   {
-    accessDRAM(addr_no_offset,cache[index].block[block_address].data,uint_log2(block_size),WRITE);
+    //write to the Dram
+    accessDRAM(addr,cache[index].block[block_address].data,offsetBits,WRITE);
   }
   //hit
-  if (hit != 0){
+  if (miss != 0){
     Update_LRU(index,block_address);
     highlight_offset(index,block_address,offset,HIT);
   }
@@ -290,7 +294,8 @@ void accessMemory(address addr, word* data, WriteEnable we)
     }
     else{
       //write through
-      accessDRAM(addr_no_offset,cache[index].block[block_address].data,uint_log2(MAX_BLOCK_SIZE),WRITE);
+      int MaxBlock = uint_log2(MAX_BLOCK_SIZE);
+      accessDRAM(addr,cache[index].block[block_address].data,MaxBlock,WRITE);
       cache[index].block[block_address].dirty = VIRGIN;
       
     }
